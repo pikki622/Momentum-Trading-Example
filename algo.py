@@ -33,13 +33,11 @@ risk = 0.001
 def get_1000m_history_data(symbols):
     print('Getting historical data...')
     minute_history = {}
-    c = 0
-    for symbol in symbols:
+    for c, symbol in enumerate(symbols, start=1):
         minute_history[symbol] = api.polygon.historic_agg(
             size="minute", symbol=symbol, limit=1000
         ).df
-        c += 1
-        print('{}/{}'.format(c, len(symbols)))
+        print(f'{c}/{len(symbols)}')
     print('Success.')
     return minute_history
 
@@ -125,7 +123,7 @@ def run(tickers, market_open_dt, market_close_dt):
             if event == 'partial_fill':
                 qty = int(data.order['filled_qty'])
                 if data.order['side'] == 'sell':
-                    qty = qty * -1
+                    qty *= -1
                 positions[symbol] = (
                     positions.get(symbol, 0) - partial_fills.get(symbol, 0)
                 )
@@ -135,14 +133,14 @@ def run(tickers, market_open_dt, market_close_dt):
             elif event == 'fill':
                 qty = int(data.order['filled_qty'])
                 if data.order['side'] == 'sell':
-                    qty = qty * -1
+                    qty *= -1
                 positions[symbol] = (
                     positions.get(symbol, 0) - partial_fills.get(symbol, 0)
                 )
                 partial_fills[symbol] = 0
                 positions[symbol] += qty
                 open_orders[symbol] = None
-            elif event == 'canceled' or event == 'rejected':
+            elif event in ['canceled', 'rejected']:
                 partial_fills[symbol] = 0
                 open_orders[symbol] = None
 
@@ -370,8 +368,8 @@ def run_ws(conn, channels):
 if __name__ == "__main__":
     # Get when the market opens or opened today
     nyc = timezone('America/New_York')
-    today = datetime.today().astimezone(nyc)
-    today_str = datetime.today().astimezone(nyc).strftime('%Y-%m-%d')
+    today = datetime.now().astimezone(nyc)
+    today_str = datetime.now().astimezone(nyc).strftime('%Y-%m-%d')
     calendar = api.get_calendar(start=today_str, end=today_str)[0]
     market_open = today.replace(
         hour=calendar.open.hour,
@@ -387,7 +385,7 @@ if __name__ == "__main__":
     market_close = market_close.astimezone(nyc)
 
     # Wait until just before we might want to trade
-    current_dt = datetime.today().astimezone(nyc)
+    current_dt = datetime.now().astimezone(nyc)
     since_market_open = current_dt - market_open
     while since_market_open.seconds // 60 <= 14:
         time.sleep(1)
